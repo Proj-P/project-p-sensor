@@ -1,64 +1,60 @@
-#! /usr/bin/env python
-# -*- coding: utf-8 -*-
-
-import RPi.GPIO as gpio
 import time
+
 import requests
+from gpiozero import Button
+from signal import pause
 
-PIN = 14
-API_URL = 'http://api.project-p.xyz'
-TOKEN = 'YOUR TOKEN'
-WAIT_TIME = 2
+API_URL = 'http://192.168.1.149:5000'
+TOKEN = 'b22f74b27eb3881fd9b10ef89f2019c2'
+reed_sensor = Button(14)
 
-class Sensor(object):
+class Sensor:
+
     def __init__(self):
         self.start_time = None
         self.end_time = None
-        self.status = False
+        self.occupied = False
 
-    def toggle(self, _):
-        self._toggle_status()
+    def door_opened(self):
+        print('Door opened')
+        self.occupied = False
+        send_status(self.occupied)
+        self.end_time = int(time.time())
 
-        if not self.status:
-            time.sleep(WAIT_TIME)
-            if gpio.input(PIN) == 0:
-                print 'toggle on'
-                self.start_time = int(time.time())-WAIT_TIME
-        else:
-            time.sleep(WAIT_TIME)
-            if gpio.input(PIN) == 1:
-                print 'toggle off'
-                self.end_time = int(time.time())+WAIT_TIME
-                self._send_visit()
-
-        # Remove event listener for a second to prevent it from instantly
-        # toggeling back
-        gpio.remove_event_detect(PIN)
         time.sleep(1)
-        gpio.add_event_detect(PIN, gpio.BOTH, callback=self.toggle)
+        if self.start_time and self.end_time and not self.occupied:
+            send_visit(self)
 
-    def _send_visit(self):
-        # Don't log entries shorter than 10 seconds
-        if (self.end_time - self.start_time) <= 10:
-            return
+    def door_closed(self):
+        print('Door closed')
+        self.occupied = True
+        send_status(self.occupied)
+        self.start_time = int(time.time())
 
-        requests.post('%s/visits' % API_URL, data={
-            'start_time': self.start_time,
-            'end_time': self.end_time,
-        }, headers={'Authorization': TOKEN})
 
-    def _toggle_status(self):
-        self.status = not self.status
-        requests.put('%s/locations/toggle' % API_URL, headers={
-            'Authorization': TOKEN
-        })
+def send_status(status):
+    requests.put('%s/locations/status' % API_URL, data={
+        'occupied': str(status).lower()
+    }, headers={
+        'Authorization': TOKEN
+    }, verify=False)
 
-if __name__ == '__main__':
-    gpio.setmode(gpio.BCM)
-    gpio.setup(PIN, gpio.IN, pull_up_down=gpio.PUD_UP)
 
-    sensor = Sensor()
-    gpio.add_event_detect(PIN, gpio.BOTH, callback=sensor.toggle)
+def send_visit(self):
+    # Don't log entries shorter than 10 seconds
+    if (self.end_time - self.start_time) <= 10:
+        print('Not saving visit, too short.')
+        return
 
-    while True:
-        time.sleep(1)
+    requests.post('%s/visits' % API_URL, data={
+        'start_time': self.start_time,
+        'end_time': self.end_time,
+    }, headers={'Authorization': TOKEN})
+
+
+sensor = Sensor()
+
+reed_sensor.when_pressed = sensor.door_closed
+reed_sensor.when_released = sensor.door_opened
+
+pause()
