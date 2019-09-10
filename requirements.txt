@@ -1,2 +1,2 @@
-requests==2.10.0
-RPi.GPIO==0.6.2
+gpiozero
+requests>=2.20.0
