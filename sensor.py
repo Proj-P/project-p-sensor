@@ -53,6 +53,7 @@ def send_visit(self):
 
 
 sensor = Sensor()
+print('starting Project P...')
 
 reed_sensor.when_pressed = sensor.door_closed
 reed_sensor.when_released = sensor.door_opened
