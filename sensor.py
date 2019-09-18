@@ -1,5 +1,4 @@
 import time
-
 import requests
 from gpiozero import Button
 from signal import pause
@@ -7,6 +6,7 @@ from signal import pause
 API_URL = 'http://192.168.1.149:5000'
 TOKEN = 'b22f74b27eb3881fd9b10ef89f2019c2'
 reed_sensor = Button(14)
+
 
 class Sensor:
 
@@ -35,9 +35,7 @@ class Sensor:
 def send_status(status):
     requests.put('%s/locations/status' % API_URL, data={
         'occupied': str(status).lower()
-    }, headers={
-        'Authorization': TOKEN
-    }, verify=False)
+    }, headers={'Authorization': TOKEN})
 
 
 def send_visit(self):
@@ -52,8 +50,9 @@ def send_visit(self):
     }, headers={'Authorization': TOKEN})
 
 
-sensor = Sensor()
 print('starting Project P...')
+
+sensor = Sensor()
 
 reed_sensor.when_pressed = sensor.door_closed
 reed_sensor.when_released = sensor.door_opened
