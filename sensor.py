@@ -15,6 +15,9 @@ class Sensor:
         self.end_time = None
         self.occupied = False
 
+        # Send status to API once when the program starts
+        send_status(self.occupied)
+
     def door_opened(self):
         print('Door opened')
         self.occupied = False
